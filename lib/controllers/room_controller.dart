@@ -1,9 +1,9 @@
 import 'dart:math';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:ticktaktoe/views/game_view.dart';
 import '../models/room_model.dart';
-import '../services/database_service.dart';// We will create this next
-import '../views/game_view.dart';
+import '../services/database_service.dart';
 
 class RoomController extends GetxController {
   // Current User ID (Simple random generation for demo)
@@ -13,33 +13,69 @@ class RoomController extends GetxController {
   
   // Create Party
   void createRoom() async {
-    String newRoomId = (1000 + Random().nextInt(9000)).toString(); // Generates 4-digit code
-    
-    RoomModel newRoom = RoomModel(
-      roomId: newRoomId,
-      board: List.filled(9, ''),
-      player1Id: userId,
-      player2Id: '',
-      turn: userId, // Creator moves first
-      winner: '',
-      isGameActive: true,
-    );
+    try {
+      // Show loading
+      Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
 
-    await DatabaseService.createRoom(newRoom);
-    
-    // Start listening to the room
-    streamRoom(newRoomId);
-    Get.to(() => GameView(roomId: newRoomId, isHost: true));
+      String newRoomId = (1000 + Random().nextInt(9000)).toString(); // Generates 4-digit code
+      
+      RoomModel newRoom = RoomModel(
+        roomId: newRoomId,
+        board: List.filled(9, ''),
+        player1Id: userId,
+        player2Id: '',
+        turn: userId, // Creator moves first
+        winner: '',
+        isGameActive: true,
+      );
+
+      await DatabaseService.createRoom(newRoom);
+      
+      // Close loading
+      if (Get.isDialogOpen!) Get.back();
+
+      // Start listening to the room
+      streamRoom(newRoomId);
+      Get.to(() => GameView(roomId: newRoomId, isHost: true));
+
+    } catch (e) {
+      if (Get.isDialogOpen!) Get.back();
+      Get.snackbar(
+        "Error Creating Room", 
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      print("Firebase Error: $e");
+    }
   }
 
   // Join Party
   void joinRoom(String roomId) async {
-    bool joined = await DatabaseService.joinRoom(roomId, userId);
-    if (joined) {
-      streamRoom(roomId);
-      Get.to(() => GameView(roomId: roomId, isHost: false));
-    } else {
-      Get.snackbar("Error", "Room is full or does not exist");
+    try {
+      Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+
+      bool joined = await DatabaseService.joinRoom(roomId, userId);
+      
+      if (Get.isDialogOpen!) Get.back();
+
+      if (joined) {
+        streamRoom(roomId);
+        Get.to(() => GameView(roomId: roomId, isHost: false));
+      } else {
+        Get.snackbar("Error", "Room is full or does not exist");
+      }
+    } catch (e) {
+      if (Get.isDialogOpen!) Get.back();
+      Get.snackbar(
+        "Connection Error", 
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      print("Firebase Error: $e");
     }
   }
 
@@ -57,12 +93,14 @@ class RoomController extends GetxController {
   void makeMove(int index, String roomId) {
     if (room.value == null) return;
     
-    // Check if it's my turn and the cell is empty
+    // Check if it's my turn
     if (room.value!.turn != userId) {
       Get.snackbar("Wait", "It's not your turn!");
       return;
     }
+    // Check if cell is empty
     if (room.value!.board[index] != '') return;
+    // Check if game is active
     if (!room.value!.isGameActive) return;
 
     // Logic for X and O
@@ -76,14 +114,16 @@ class RoomController extends GetxController {
         : room.value!.player1Id;
 
     // Update Firebase
-    DatabaseService.updateGame(roomId, newBoard, nextPlayerId);
-    
-    // Check for win locally (Firebase will sync it, but we can check here too)
-    checkWinner(newBoard, roomId);
+    try {
+      DatabaseService.updateGame(roomId, newBoard, nextPlayerId);
+      // Check for win locally for immediate feedback
+      checkWinner(newBoard, roomId);
+    } catch (e) {
+      Get.snackbar("Sync Error", "Could not update move");
+    }
   }
 
   void checkWinner(List<String> board, String roomId) {
-    // Winning combinations
     List<List<int>> wins = [
       [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
       [0, 3, 6], [1, 4, 7], [2, 5, 8], // Cols
