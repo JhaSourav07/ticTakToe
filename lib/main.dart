@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:ticktaktoe/views/game_view.dart';
+import 'package:ticktaktoe/views/home_view.dart';
 import 'firebase_options.dart'; // <--- 1. IMPORT THIS
 
 void main() async {
