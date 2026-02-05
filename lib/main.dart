@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:ticktaktoe/views/home_view.dart';
 import 'firebase_options.dart'; // <--- 1. IMPORT THIS
+import 'package:ticktaktoe/bindings/game_binding.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +23,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Tic Tac Toe Party',
       theme: ThemeData(primarySwatch: Colors.blue),
+      initialBinding: GameBinding(),
       home: HomeView(),
       debugShowCheckedModeBanner: false,
     );
