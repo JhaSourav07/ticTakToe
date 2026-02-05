@@ -45,4 +45,9 @@ class DatabaseService {
       'isGameActive': false,
     });
   }
+
+  // Restart Game (Rematch)
+  static Future<void> restartGame(String roomId, Map<String, dynamic> data) async {
+    await _db.collection('rooms').doc(roomId).update(data);
+  }
 }

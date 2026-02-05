@@ -250,6 +250,26 @@ class GameView extends StatelessWidget {
                     },
                   ),
                 ),
+                
+                // Rematch Button (Visible only when game ends)
+                if (!room.isGameActive)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: SizedBox(
+                      width: 200,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.refresh),
+                        label: const Text("PLAY AGAIN", style: TextStyle(fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6C63FF),
+                          foregroundColor: Colors.white,
+                          elevation: 10,
+                        ),
+                        onPressed: () => controller.startRematch("X"),
+                      ),
+                    ),
+                  ),
 
                 const Spacer(),
 

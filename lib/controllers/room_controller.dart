@@ -14,10 +14,9 @@ class RoomController extends GetxController {
   // Create Party
   void createRoom() async {
     try {
-      // Show loading
       Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
 
-      String newRoomId = (1000 + Random().nextInt(9000)).toString(); // Generates 4-digit code
+      String newRoomId = (1000 + Random().nextInt(9000)).toString(); 
       
       RoomModel newRoom = RoomModel(
         roomId: newRoomId,
@@ -31,23 +30,14 @@ class RoomController extends GetxController {
 
       await DatabaseService.createRoom(newRoom);
       
-      // Close loading
       if (Get.isDialogOpen!) Get.back();
 
-      // Start listening to the room
       streamRoom(newRoomId);
       Get.to(() => GameView(roomId: newRoomId, isHost: true));
 
     } catch (e) {
       if (Get.isDialogOpen!) Get.back();
-      Get.snackbar(
-        "Error Creating Room", 
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
-      print("Firebase Error: $e");
+      Get.snackbar("Error", e.toString());
     }
   }
 
@@ -68,14 +58,7 @@ class RoomController extends GetxController {
       }
     } catch (e) {
       if (Get.isDialogOpen!) Get.back();
-      Get.snackbar(
-        "Connection Error", 
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
-      print("Firebase Error: $e");
+      Get.snackbar("Error", e.toString());
     }
   }
 
@@ -93,30 +76,23 @@ class RoomController extends GetxController {
   void makeMove(int index, String roomId) {
     if (room.value == null) return;
     
-    // Check if it's my turn
     if (room.value!.turn != userId) {
       Get.snackbar("Wait", "It's not your turn!");
       return;
     }
-    // Check if cell is empty
     if (room.value!.board[index] != '') return;
-    // Check if game is active
     if (!room.value!.isGameActive) return;
 
-    // Logic for X and O
     String mySymbol = (room.value!.player1Id == userId) ? "X" : "O";
     List<String> newBoard = List.from(room.value!.board);
     newBoard[index] = mySymbol;
 
-    // Determine next turn
     String nextPlayerId = (room.value!.player1Id == userId) 
         ? room.value!.player2Id 
         : room.value!.player1Id;
 
-    // Update Firebase
     try {
       DatabaseService.updateGame(roomId, newBoard, nextPlayerId);
-      // Check for win locally for immediate feedback
       checkWinner(newBoard, roomId);
     } catch (e) {
       Get.snackbar("Sync Error", "Could not update move");
@@ -137,14 +113,46 @@ class RoomController extends GetxController {
 
       if (a != '' && a == b && a == c) {
         DatabaseService.setWinner(roomId, a);
-        Get.snackbar("Game Over", "$a Wins!");
         return;
       }
     }
 
     if (!board.contains('')) {
       DatabaseService.setWinner(roomId, "Draw");
-      Get.snackbar("Game Over", "It's a Draw!");
     }
+  }
+
+  // Start Rematch
+  void startRematch(String choice) {
+    if (room.value == null) return;
+    
+    // Identify opponent ID
+    String opponentId = (room.value!.player1Id == userId) 
+        ? room.value!.player2Id 
+        : room.value!.player1Id;
+
+    String newP1, newP2;
+    
+    // If I chose X, I become Player 1. If O, I become Player 2.
+    if (choice == 'X') {
+      newP1 = userId;
+      newP2 = opponentId;
+    } else {
+      newP1 = opponentId;
+      newP2 = userId;
+    }
+
+    // Reset Data
+    Map<String, dynamic> data = {
+      'board': List.filled(9, ''),
+      'player1Id': newP1,
+      'player2Id': newP2,
+      'turn': newP1, // X always starts
+      'winner': '',
+      'isGameActive': true,
+    };
+
+    DatabaseService.restartGame(room.value!.roomId, data);
+    if (Get.isDialogOpen!) Get.back();
   }
 }
