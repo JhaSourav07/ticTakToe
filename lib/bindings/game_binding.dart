@@ -4,6 +4,6 @@ import '../controllers/room_controller.dart';
 class GameBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<RoomController>(() => RoomController());
+    Get.put(RoomController());
   }
 }

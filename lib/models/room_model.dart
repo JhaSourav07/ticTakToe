@@ -1,11 +1,14 @@
 class RoomModel {
   String roomId;
-  List<String> board; // The 9 grids, e.g., ["", "X", "", ...]
-  String player1Id;   // Creator ID
-  String player2Id;   // Joiner ID
-  String turn;        // ID of player whose turn it is
-  String winner;      // "", "X", "O", or "Draw"
+  List<String> board; 
+  String player1Id;   
+  String player2Id;   
+  String turn;        
+  String winner;      
   bool isGameActive;
+  int player1Score; // New: Score for X
+  int player2Score; // New: Score for O
+  List<int> winningLine; // New: Indices of winning cells (e.g., [0,1,2])
 
   RoomModel({
     required this.roomId,
@@ -15,9 +18,11 @@ class RoomModel {
     required this.turn,
     required this.winner,
     required this.isGameActive,
+    this.player1Score = 0,
+    this.player2Score = 0,
+    this.winningLine = const [],
   });
 
-  // Convert to Map for Firebase
   Map<String, dynamic> toJson() => {
         'roomId': roomId,
         'board': board,
@@ -26,9 +31,11 @@ class RoomModel {
         'turn': turn,
         'winner': winner,
         'isGameActive': isGameActive,
+        'player1Score': player1Score,
+        'player2Score': player2Score,
+        'winningLine': winningLine,
       };
 
-  // Create from Firebase Snapshot
   factory RoomModel.fromJson(Map<String, dynamic> json) {
     return RoomModel(
       roomId: json['roomId'] ?? '',
@@ -38,6 +45,9 @@ class RoomModel {
       turn: json['turn'] ?? '',
       winner: json['winner'] ?? '',
       isGameActive: json['isGameActive'] ?? true,
+      player1Score: json['player1Score'] ?? 0,
+      player2Score: json['player2Score'] ?? 0,
+      winningLine: List<int>.from(json['winningLine'] ?? []),
     );
   }
 }

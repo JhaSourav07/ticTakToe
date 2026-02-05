@@ -1,10 +1,11 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:ticktaktoe/controllers/room_controller.dart';
+import '../controllers/room_controller.dart';
 
 class HomeView extends StatelessWidget {
-  final RoomController controller = Get.find<RoomController>();
+  // FIX: Use Get.put() to create the controller if it doesn't exist.
+  // This prevents "RoomController not found" errors.
+  final RoomController controller = Get.put(RoomController());
   final TextEditingController codeController = TextEditingController();
 
   HomeView({Key? key}) : super(key: key);

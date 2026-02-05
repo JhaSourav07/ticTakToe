@@ -6,7 +6,6 @@ import '../models/room_model.dart';
 import '../services/database_service.dart';
 
 class RoomController extends GetxController {
-  // Current User ID (Simple random generation for demo)
   final String userId = DateTime.now().millisecondsSinceEpoch.toString();
   
   Rx<RoomModel?> room = Rx<RoomModel?>(null);
@@ -23,9 +22,12 @@ class RoomController extends GetxController {
         board: List.filled(9, ''),
         player1Id: userId,
         player2Id: '',
-        turn: userId, // Creator moves first
+        turn: userId,
         winner: '',
         isGameActive: true,
+        player1Score: 0,
+        player2Score: 0,
+        winningLine: [],
       );
 
       await DatabaseService.createRoom(newRoom);
@@ -62,7 +64,6 @@ class RoomController extends GetxController {
     }
   }
 
-  // Listen to Firebase
   void streamRoom(String roomId) {
     room.bindStream(DatabaseService.roomStream(roomId).map((snapshot) {
       if (snapshot.exists && snapshot.data() != null) {
@@ -72,7 +73,6 @@ class RoomController extends GetxController {
     }));
   }
 
-  // Handle a player tap
   void makeMove(int index, String roomId) {
     if (room.value == null) return;
     
@@ -112,47 +112,54 @@ class RoomController extends GetxController {
       String c = board[win[2]];
 
       if (a != '' && a == b && a == c) {
-        DatabaseService.setWinner(roomId, a);
+        // Calculate new scores
+        int p1Score = room.value!.player1Score;
+        int p2Score = room.value!.player2Score;
+        
+        // P1 is always X, P2 is always O
+        if (a == 'X') {
+          p1Score++;
+        } else {
+          p2Score++;
+        }
+
+        DatabaseService.setWinner(roomId, a, p1Score, p2Score, win);
         return;
       }
     }
 
     if (!board.contains('')) {
-      DatabaseService.setWinner(roomId, "Draw");
+      DatabaseService.setWinner(roomId, "Draw", room.value!.player1Score, room.value!.player2Score, []);
     }
   }
 
-  // Start Rematch
-  void startRematch(String choice) {
+  void startRematch() {
     if (room.value == null) return;
     
-    // Identify opponent ID
-    String opponentId = (room.value!.player1Id == userId) 
-        ? room.value!.player2Id 
-        : room.value!.player1Id;
+    String currentP1 = room.value!.player1Id;
+    String currentP2 = room.value!.player2Id;
 
-    String newP1, newP2;
-    
-    // If I chose X, I become Player 1. If O, I become Player 2.
-    if (choice == 'X') {
-      newP1 = userId;
-      newP2 = opponentId;
-    } else {
-      newP1 = opponentId;
-      newP2 = userId;
-    }
+    // Keep scores, swap players
+    // Note: Scores are tied to X/O (P1/P2). 
+    // If we swap players, the scores technically "swap" owners if we don't adjust logic.
+    // For simplicity: We keep P1 as P1 score (X score) and P2 as P2 score (O score).
+    // The players physically swap roles, so the score for "X" continues to accumulate.
 
-    // Reset Data
     Map<String, dynamic> data = {
       'board': List.filled(9, ''),
-      'player1Id': newP1,
-      'player2Id': newP2,
-      'turn': newP1, // X always starts
+      'player1Id': currentP2, 
+      'player2Id': currentP1,
+      'turn': currentP2, 
       'winner': '',
       'isGameActive': true,
+      'winningLine': [], // Reset winning line
     };
 
     DatabaseService.restartGame(room.value!.roomId, data);
-    if (Get.isDialogOpen!) Get.back();
+  }
+
+  void exitGame() {
+    room.value = null; // Clear local state
+    Get.back(); // Go home
   }
 }

@@ -38,11 +38,14 @@ class DatabaseService {
     });
   }
 
-  // Declare Winner
-  static Future<void> setWinner(String roomId, String winner) async {
+  // Declare Winner with Scores
+  static Future<void> setWinner(String roomId, String winner, int p1Score, int p2Score, List<int> winningLine) async {
     await _db.collection('rooms').doc(roomId).update({
       'winner': winner,
       'isGameActive': false,
+      'player1Score': p1Score,
+      'player2Score': p2Score,
+      'winningLine': winningLine,
     });
   }
 
