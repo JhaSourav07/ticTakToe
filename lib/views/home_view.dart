@@ -3,8 +3,6 @@ import 'package:get/get.dart';
 import '../controllers/room_controller.dart';
 
 class HomeView extends StatelessWidget {
-  // FIX: Use Get.put() to create the controller if it doesn't exist.
-  // This prevents "RoomController not found" errors.
   final RoomController controller = Get.put(RoomController());
   final TextEditingController codeController = TextEditingController();
 
@@ -14,7 +12,6 @@ class HomeView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        // Gradient Background
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -29,7 +26,6 @@ class HomeView extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo / Title Section
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -52,25 +48,10 @@ class HomeView extends StatelessWidget {
                   const SizedBox(height: 30),
                   const Text(
                     "TIC TAC TOE",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 4,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const Text(
-                    "MULTIPLAYER",
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 8,
-                      color: Colors.white54,
-                    ),
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 4, color: Colors.white),
                   ),
                   const SizedBox(height: 60),
 
-                  // Game Menu Card
                   Container(
                     padding: const EdgeInsets.all(30),
                     decoration: BoxDecoration(
@@ -80,17 +61,28 @@ class HomeView extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        // Create Room Button
+                        // NICKNAME INPUT
+                        TextField(
+                          controller: controller.nameController,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            hintText: "YOUR NICKNAME",
+                            hintStyle: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
+                            prefixIcon: const Icon(Icons.person, color: Color(0xFF6C63FF)),
+                            filled: true,
+                            fillColor: Colors.black.withOpacity(0.3),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
                         SizedBox(
                           width: double.infinity,
                           height: 60,
                           child: ElevatedButton.icon(
                             onPressed: () => controller.createRoom(),
                             icon: const Icon(Icons.add_rounded),
-                            label: const Text(
-                              "CREATE PARTY",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1),
-                            ),
+                            label: const Text("CREATE PARTY", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF6C63FF),
                               foregroundColor: Colors.white,
@@ -99,25 +91,18 @@ class HomeView extends StatelessWidget {
                         ),
                         
                         const SizedBox(height: 30),
-                        
-                        // Divider
                         Row(
                           children: [
                             Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                "OR",
-                                style: TextStyle(color: Colors.white.withOpacity(0.3), fontWeight: FontWeight.bold),
-                              ),
+                              child: Text("OR", style: TextStyle(color: Colors.white.withOpacity(0.3), fontWeight: FontWeight.bold)),
                             ),
                             Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
                           ],
                         ),
-
                         const SizedBox(height: 30),
 
-                        // Join Input
                         TextField(
                           controller: codeController,
                           keyboardType: TextInputType.number,
@@ -125,15 +110,11 @@ class HomeView extends StatelessWidget {
                           style: const TextStyle(fontSize: 20, letterSpacing: 4, fontWeight: FontWeight.bold, color: Colors.white),
                           decoration: const InputDecoration(
                             hintText: "ENTER CODE",
-                            hintStyle: TextStyle(fontSize: 14, letterSpacing: 1),
-                            contentPadding: EdgeInsets.symmetric(vertical: 18),
                             prefixIcon: Icon(Icons.keyboard, color: Colors.white30),
                           ),
                         ),
-                        
                         const SizedBox(height: 16),
 
-                        // Join Button
                         SizedBox(
                           width: double.infinity,
                           height: 60,
@@ -144,10 +125,7 @@ class HomeView extends StatelessWidget {
                               }
                             },
                             icon: const Icon(Icons.login_rounded),
-                            label: const Text(
-                              "JOIN PARTY",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1),
-                            ),
+                            label: const Text("JOIN PARTY", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white,
                               side: BorderSide(color: const Color(0xFF6C63FF).withOpacity(0.5), width: 2),

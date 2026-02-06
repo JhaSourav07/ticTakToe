@@ -2,19 +2,23 @@ class RoomModel {
   String roomId;
   List<String> board; 
   String player1Id;   
-  String player2Id;   
+  String player2Id;
+  String player1Name; // New
+  String player2Name; // New
   String turn;        
   String winner;      
   bool isGameActive;
-  int player1Score; // New: Score for X
-  int player2Score; // New: Score for O
-  List<int> winningLine; // New: Indices of winning cells (e.g., [0,1,2])
+  int player1Score; 
+  int player2Score; 
+  List<int> winningLine; 
 
   RoomModel({
     required this.roomId,
     required this.board,
     required this.player1Id,
     required this.player2Id,
+    required this.player1Name, // New
+    required this.player2Name, // New
     required this.turn,
     required this.winner,
     required this.isGameActive,
@@ -28,6 +32,8 @@ class RoomModel {
         'board': board,
         'player1Id': player1Id,
         'player2Id': player2Id,
+        'player1Name': player1Name, // New
+        'player2Name': player2Name, // New
         'turn': turn,
         'winner': winner,
         'isGameActive': isGameActive,
@@ -42,6 +48,8 @@ class RoomModel {
       board: List<String>.from(json['board'] ?? List.filled(9, '')),
       player1Id: json['player1Id'] ?? '',
       player2Id: json['player2Id'] ?? '',
+      player1Name: json['player1Name'] ?? 'Player 1', // New
+      player2Name: json['player2Name'] ?? 'Player 2', // New
       turn: json['turn'] ?? '',
       winner: json['winner'] ?? '',
       isGameActive: json['isGameActive'] ?? true,

@@ -8,20 +8,30 @@ import '../services/database_service.dart';
 class RoomController extends GetxController {
   final String userId = DateTime.now().millisecondsSinceEpoch.toString();
   
+  // New Controller for Name Input
+  final TextEditingController nameController = TextEditingController();
+  
   Rx<RoomModel?> room = Rx<RoomModel?>(null);
   
-  // Create Party
   void createRoom() async {
     try {
+      if (nameController.text.isEmpty) {
+        Get.snackbar("Required", "Please enter your nickname");
+        return;
+      }
+
       Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
 
       String newRoomId = (1000 + Random().nextInt(9000)).toString(); 
-      
+      String myName = nameController.text.trim();
+
       RoomModel newRoom = RoomModel(
         roomId: newRoomId,
         board: List.filled(9, ''),
         player1Id: userId,
         player2Id: '',
+        player1Name: myName, // Set Host Name
+        player2Name: '',
         turn: userId,
         winner: '',
         isGameActive: true,
@@ -43,12 +53,19 @@ class RoomController extends GetxController {
     }
   }
 
-  // Join Party
   void joinRoom(String roomId) async {
     try {
+       if (nameController.text.isEmpty) {
+        Get.snackbar("Required", "Please enter your nickname");
+        return;
+      }
+
       Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
 
-      bool joined = await DatabaseService.joinRoom(roomId, userId);
+      String myName = nameController.text.trim();
+      
+      // Pass name to joinRoom
+      bool joined = await DatabaseService.joinRoom(roomId, userId, myName);
       
       if (Get.isDialogOpen!) Get.back();
 
@@ -101,9 +118,9 @@ class RoomController extends GetxController {
 
   void checkWinner(List<String> board, String roomId) {
     List<List<int>> wins = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-      [0, 3, 6], [1, 4, 7], [2, 5, 8], // Cols
-      [0, 4, 8], [2, 4, 6]             // Diagonals
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6]
     ];
 
     for (var win in wins) {
@@ -112,11 +129,9 @@ class RoomController extends GetxController {
       String c = board[win[2]];
 
       if (a != '' && a == b && a == c) {
-        // Calculate new scores
         int p1Score = room.value!.player1Score;
         int p2Score = room.value!.player2Score;
         
-        // P1 is always X, P2 is always O
         if (a == 'X') {
           p1Score++;
         } else {
@@ -138,28 +153,31 @@ class RoomController extends GetxController {
     
     String currentP1 = room.value!.player1Id;
     String currentP2 = room.value!.player2Id;
+    String currentP1Name = room.value!.player1Name;
+    String currentP2Name = room.value!.player2Name;
+    int currentP1Score = room.value!.player1Score;
+    int currentP2Score = room.value!.player2Score;
 
-    // Keep scores, swap players
-    // Note: Scores are tied to X/O (P1/P2). 
-    // If we swap players, the scores technically "swap" owners if we don't adjust logic.
-    // For simplicity: We keep P1 as P1 score (X score) and P2 as P2 score (O score).
-    // The players physically swap roles, so the score for "X" continues to accumulate.
-
+    // Swap players AND names AND scores
     Map<String, dynamic> data = {
       'board': List.filled(9, ''),
       'player1Id': currentP2, 
       'player2Id': currentP1,
+      'player1Name': currentP2Name,
+      'player2Name': currentP1Name,
+      'player1Score': currentP2Score, // Correctly swap scores
+      'player2Score': currentP1Score,
       'turn': currentP2, 
       'winner': '',
       'isGameActive': true,
-      'winningLine': [], // Reset winning line
+      'winningLine': [],
     };
 
     DatabaseService.restartGame(room.value!.roomId, data);
   }
 
   void exitGame() {
-    room.value = null; // Clear local state
-    Get.back(); // Go home
+    room.value = null;
+    Get.back();
   }
 }

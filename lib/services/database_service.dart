@@ -4,33 +4,32 @@ import '../models/room_model.dart';
 class DatabaseService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Create a new Room
   static Future<void> createRoom(RoomModel room) async {
     await _db.collection('rooms').doc(room.roomId).set(room.toJson());
   }
 
-  // Join an existing Room
-  static Future<bool> joinRoom(String roomId, String playerId) async {
+  // Updated to accept playerName
+  static Future<bool> joinRoom(String roomId, String playerId, String playerName) async {
     DocumentSnapshot doc = await _db.collection('rooms').doc(roomId).get();
 
     if (doc.exists) {
       RoomModel room = RoomModel.fromJson(doc.data() as Map<String, dynamic>);
       
-      // If room is not full, add player 2
       if (room.player2Id.isEmpty) {
-        await _db.collection('rooms').doc(roomId).update({'player2Id': playerId});
+        await _db.collection('rooms').doc(roomId).update({
+          'player2Id': playerId,
+          'player2Name': playerName, // Save name
+        });
         return true;
       }
     }
     return false;
   }
 
-  // Listen to Room updates (Real-time!)
   static Stream<DocumentSnapshot> roomStream(String roomId) {
     return _db.collection('rooms').doc(roomId).snapshots();
   }
 
-  // Update Board Move
   static Future<void> updateGame(String roomId, List<String> board, String nextTurn) async {
     await _db.collection('rooms').doc(roomId).update({
       'board': board,
@@ -38,7 +37,6 @@ class DatabaseService {
     });
   }
 
-  // Declare Winner with Scores
   static Future<void> setWinner(String roomId, String winner, int p1Score, int p2Score, List<int> winningLine) async {
     await _db.collection('rooms').doc(roomId).update({
       'winner': winner,
@@ -49,7 +47,6 @@ class DatabaseService {
     });
   }
 
-  // Restart Game (Rematch)
   static Future<void> restartGame(String roomId, Map<String, dynamic> data) async {
     await _db.collection('rooms').doc(roomId).update(data);
   }

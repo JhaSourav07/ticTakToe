@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Needed for Clipboard
+import 'package:flutter/services.dart'; 
 import 'package:get/get.dart';
 import '../controllers/room_controller.dart';
 
@@ -8,17 +8,15 @@ class GameView extends StatelessWidget {
   final bool isHost;
   final RoomController controller = Get.find();
 
-  // Updated to use super.key
   GameView({super.key, required this.roomId, required this.isHost});
 
   @override
   Widget build(BuildContext context) {
-    // Wrap in PopScope to handle system back button/gestures
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        controller.exitGame(); // Ensures clean exit state
+        controller.exitGame(); 
       },
       child: Scaffold(
         appBar: AppBar(
@@ -54,7 +52,6 @@ class GameView extends StatelessWidget {
 
               var room = controller.room.value!;
               
-              // --- WAITING FOR PLAYER ---
               if (room.player2Id.isEmpty) {
                 return Center(
                   child: Padding(
@@ -67,15 +64,9 @@ class GameView extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 4, color: Color(0xFF6C63FF)),
                         ),
                         const SizedBox(height: 40),
-                        const Text(
-                          "Waiting for opponent...",
-                          style: TextStyle(fontSize: 20, color: Colors.white70),
-                        ),
+                        const Text("Waiting for opponent...", style: TextStyle(fontSize: 20, color: Colors.white70)),
                         const SizedBox(height: 10),
-                        const Text(
-                          "Share the code below with your friend",
-                          style: TextStyle(fontSize: 14, color: Colors.white38),
-                        ),
+                        const Text("Share the code below with your friend", style: TextStyle(fontSize: 14, color: Colors.white38)),
                         const SizedBox(height: 30),
                         GestureDetector(
                           onTap: () {
@@ -105,9 +96,24 @@ class GameView extends StatelessWidget {
                 );
               }
 
-              // --- GAME ACTIVE / FINISHED ---
+              // Logic to keep "Me" on the left and "Opponent" on the right
+              bool amIP1 = room.player1Id == controller.userId;
+              
+              // My Info (Left)
+              String myName = amIP1 ? room.player1Name : room.player2Name;
+              if (myName.isEmpty) myName = "You";
+              String myScore = "${amIP1 ? room.player1Score : room.player2Score}";
+              Color myColor = amIP1 ? Colors.cyanAccent : Colors.orangeAccent;
+              
+              // Opponent Info (Right)
+              String oppName = amIP1 ? room.player2Name : room.player1Name;
+              if (oppName.isEmpty) oppName = "Opponent";
+              String oppScore = "${amIP1 ? room.player2Score : room.player1Score}";
+              Color oppColor = amIP1 ? Colors.orangeAccent : Colors.cyanAccent;
+
+              // Game Status
               bool isMyTurn = room.turn == controller.userId;
-              String mySymbol = room.player1Id == controller.userId ? "X" : "O";
+              String mySymbol = amIP1 ? "X" : "O"; // P1 is always X
               
               String statusText;
               Color statusColor;
@@ -136,13 +142,15 @@ class GameView extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
+                        // MY SCORE (Always Left)
                         Column(children: [
-                          const Text("Player X", style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
-                          Text("${room.player1Score}", style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                          Text(myName, style: TextStyle(color: myColor, fontWeight: FontWeight.bold)),
+                          Text(myScore, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                         ]),
+                        // OPPONENT SCORE (Always Right)
                         Column(children: [
-                          const Text("Player O", style: TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold)),
-                          Text("${room.player2Score}", style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                          Text(oppName, style: TextStyle(color: oppColor, fontWeight: FontWeight.bold)),
+                          Text(oppScore, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                         ]),
                       ],
                     ),
@@ -150,7 +158,6 @@ class GameView extends StatelessWidget {
 
                   const SizedBox(height: 10),
                   
-                  // STATUS BAR
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 24),
                     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
@@ -165,13 +172,13 @@ class GameView extends StatelessWidget {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("YOU", style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                            Text("YOU ARE", style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
                             const SizedBox(height: 4),
                             Row(
                               children: [
                                 Icon(mySymbol == "X" ? Icons.close_rounded : Icons.circle_outlined, color: mySymbol == "X" ? Colors.cyanAccent : Colors.orangeAccent, size: 20),
                                 const SizedBox(width: 8),
-                                const Text("Player", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                Text(myName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ],
@@ -191,7 +198,6 @@ class GameView extends StatelessWidget {
 
                   const Spacer(),
 
-                  // GAME BOARD
                   Container(
                     margin: const EdgeInsets.all(24),
                     padding: const EdgeInsets.all(16),
@@ -211,7 +217,6 @@ class GameView extends StatelessWidget {
                       itemCount: 9,
                       itemBuilder: (context, index) {
                         String cellValue = room.board[index];
-                        // Highlight Logic
                         bool isWinningCell = room.winningLine.contains(index);
                         
                         return GestureDetector(
@@ -219,7 +224,6 @@ class GameView extends StatelessWidget {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             decoration: BoxDecoration(
-                              // WINNING COLOR LOGIC
                               color: isWinningCell 
                                   ? (cellValue == "X" ? Colors.cyanAccent.withOpacity(0.2) : Colors.orangeAccent.withOpacity(0.2))
                                   : Colors.white.withOpacity(0.05),
@@ -249,7 +253,6 @@ class GameView extends StatelessWidget {
                     ),
                   ),
                   
-                  // REMATCH BUTTON
                   if (!room.isGameActive)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
