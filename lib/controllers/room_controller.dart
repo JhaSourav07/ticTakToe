@@ -8,7 +8,6 @@ import '../services/database_service.dart';
 class RoomController extends GetxController {
   final String userId = DateTime.now().millisecondsSinceEpoch.toString();
   
-  // New Controller for Name Input
   final TextEditingController nameController = TextEditingController();
   
   Rx<RoomModel?> room = Rx<RoomModel?>(null);
@@ -30,7 +29,7 @@ class RoomController extends GetxController {
         board: List.filled(9, ''),
         player1Id: userId,
         player2Id: '',
-        player1Name: myName, // Set Host Name
+        player1Name: myName,
         player2Name: '',
         turn: userId,
         winner: '',
@@ -62,23 +61,68 @@ class RoomController extends GetxController {
 
       Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
 
-      String myName = nameController.text.trim();
+      // 1. Check Room State first
+      RoomModel? existingRoom = await DatabaseService.getRoom(roomId);
       
-      // Pass name to joinRoom
-      bool joined = await DatabaseService.joinRoom(roomId, userId, myName);
-      
-      if (Get.isDialogOpen!) Get.back();
-
-      if (joined) {
-        streamRoom(roomId);
-        Get.to(() => GameView(roomId: roomId, isHost: false));
-      } else {
-        Get.snackbar("Error", "Room is full or does not exist");
+      if (existingRoom == null) {
+        if (Get.isDialogOpen!) Get.back();
+        Get.snackbar("Error", "Room does not exist");
+        return;
       }
+
+      // 2. Logic to Handle Join vs Rejoin
+      bool isFull = existingRoom.player1Id.isNotEmpty && existingRoom.player2Id.isNotEmpty;
+      
+      if (isFull) {
+        if (Get.isDialogOpen!) Get.back();
+        // Show Rejoin Dialog
+        Get.defaultDialog(
+          title: "Room Full",
+          content: Column(
+            children: [
+              const Text("Did you get disconnected? Select your name to reconnect:"),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  _reconnect(roomId, 'player1Id');
+                },
+                child: Text("I am ${existingRoom.player1Name}"),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () {
+                  _reconnect(roomId, 'player2Id');
+                },
+                child: Text("I am ${existingRoom.player2Name}"),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // Normal Join (or filling an empty slot if someone left)
+        bool joined = await DatabaseService.joinRoom(roomId, userId, nameController.text.trim());
+        if (Get.isDialogOpen!) Get.back();
+
+        if (joined) {
+          streamRoom(roomId);
+          Get.to(() => GameView(roomId: roomId, isHost: false));
+        } else {
+          Get.snackbar("Error", "Could not join room");
+        }
+      }
+
     } catch (e) {
       if (Get.isDialogOpen!) Get.back();
       Get.snackbar("Error", e.toString());
     }
+  }
+
+  void _reconnect(String roomId, String slot) async {
+    Get.back(); // Close Dialog
+    await DatabaseService.reconnect(roomId, userId, slot);
+    streamRoom(roomId);
+    Get.to(() => GameView(roomId: roomId, isHost: false));
+    Get.snackbar("Success", "Reconnected to game!");
   }
 
   void streamRoom(String roomId) {
@@ -100,10 +144,12 @@ class RoomController extends GetxController {
     if (room.value!.board[index] != '') return;
     if (!room.value!.isGameActive) return;
 
+    // Determine Symbol based on Player ID
     String mySymbol = (room.value!.player1Id == userId) ? "X" : "O";
     List<String> newBoard = List.from(room.value!.board);
     newBoard[index] = mySymbol;
 
+    // Check if other player exists before passing turn
     String nextPlayerId = (room.value!.player1Id == userId) 
         ? room.value!.player2Id 
         : room.value!.player1Id;
@@ -158,14 +204,13 @@ class RoomController extends GetxController {
     int currentP1Score = room.value!.player1Score;
     int currentP2Score = room.value!.player2Score;
 
-    // Swap players AND names AND scores
     Map<String, dynamic> data = {
       'board': List.filled(9, ''),
       'player1Id': currentP2, 
       'player2Id': currentP1,
       'player1Name': currentP2Name,
       'player2Name': currentP1Name,
-      'player1Score': currentP2Score, // Correctly swap scores
+      'player1Score': currentP2Score, 
       'player2Score': currentP1Score,
       'turn': currentP2, 
       'winner': '',
@@ -177,6 +222,10 @@ class RoomController extends GetxController {
   }
 
   void exitGame() {
+    if (room.value != null) {
+      // Notify DB that I am leaving
+      DatabaseService.leaveRoom(room.value!.roomId, userId);
+    }
     room.value = null;
     Get.back();
   }

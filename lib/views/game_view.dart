@@ -52,7 +52,9 @@ class GameView extends StatelessWidget {
 
               var room = controller.room.value!;
               
-              if (room.player2Id.isEmpty) {
+              // --- WAITING FOR PLAYER / DISCONNECTED STATE ---
+              // If either P1 or P2 is missing, show waiting screen.
+              if (room.player1Id.isEmpty || room.player2Id.isEmpty) {
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(30),
@@ -66,7 +68,14 @@ class GameView extends StatelessWidget {
                         const SizedBox(height: 40),
                         const Text("Waiting for opponent...", style: TextStyle(fontSize: 20, color: Colors.white70)),
                         const SizedBox(height: 10),
-                        const Text("Share the code below with your friend", style: TextStyle(fontSize: 14, color: Colors.white38)),
+                        Text(
+                          (room.player1Id.isEmpty && room.player2Id.isNotEmpty) 
+                              ? "Host disconnected." 
+                              : "Opponent disconnected.", 
+                          style: const TextStyle(fontSize: 14, color: Colors.redAccent)
+                        ),
+                        const SizedBox(height: 10),
+                        const Text("Share the code below to reconnect", style: TextStyle(fontSize: 14, color: Colors.white38)),
                         const SizedBox(height: 30),
                         GestureDetector(
                           onTap: () {
@@ -96,6 +105,7 @@ class GameView extends StatelessWidget {
                 );
               }
 
+              // --- GAME ACTIVE ---
               // Logic to keep "Me" on the left and "Opponent" on the right
               bool amIP1 = room.player1Id == controller.userId;
               
