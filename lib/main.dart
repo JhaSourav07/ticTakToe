@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ticktaktoe/views/home_view.dart';
 import 'package:ticktaktoe/controllers/room_controller.dart'; // Import this
 import 'firebase_options.dart';
@@ -10,6 +11,12 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Ensure every client has an auth UID for secure Firestore rules.
+  final auth = FirebaseAuth.instance;
+  if (auth.currentUser == null) {
+    await auth.signInAnonymously();
+  }
   
   runApp(const MyApp());
 }

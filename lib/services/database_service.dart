@@ -20,29 +20,37 @@ class DatabaseService {
 
   // Join an existing Room
   static Future<bool> joinRoom(String roomId, String playerId, String playerName) async {
-    DocumentSnapshot doc = await _db.collection('rooms').doc(roomId).get();
+    final docRef = _db.collection('rooms').doc(roomId);
 
-    if (doc.exists) {
-      RoomModel room = RoomModel.fromJson(doc.data() as Map<String, dynamic>);
-      
-      // If Player 1 is missing (reclaim empty P1 slot)
+    // Transaction prevents two clients from filling the same empty slot
+    // at the same time (race condition).
+    return _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) return false;
+
+      final data = snapshot.data();
+      if (data == null) return false;
+
+      final room = RoomModel.fromJson(data);
+
       if (room.player1Id.isEmpty) {
-         await _db.collection('rooms').doc(roomId).update({
+        transaction.update(docRef, {
           'player1Id': playerId,
           'player1Name': playerName,
         });
         return true;
       }
-      // If Player 2 is missing (standard join)
-      else if (room.player2Id.isEmpty) {
-        await _db.collection('rooms').doc(roomId).update({
+
+      if (room.player2Id.isEmpty) {
+        transaction.update(docRef, {
           'player2Id': playerId,
           'player2Name': playerName,
         });
         return true;
       }
-    }
-    return false;
+
+      return false;
+    });
   }
 
   // Reconnect (Force Join/Overwrite a slot)

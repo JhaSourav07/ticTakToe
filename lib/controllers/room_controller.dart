@@ -2,11 +2,13 @@ import 'dart:math';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:ticktaktoe/views/game_view.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/room_model.dart';
 import '../services/database_service.dart';
 
 class RoomController extends GetxController {
-  final String userId = DateTime.now().millisecondsSinceEpoch.toString();
+  // Anonymous Auth UID (set up in `main()`).
+  String get userId => FirebaseAuth.instance.currentUser?.uid ?? '';
   
   final TextEditingController nameController = TextEditingController();
   
@@ -14,6 +16,10 @@ class RoomController extends GetxController {
   
   void createRoom() async {
     try {
+      if (userId.isEmpty) {
+        Get.snackbar("Auth Error", "Please enable internet and restart the app.");
+        return;
+      }
       if (nameController.text.isEmpty) {
         Get.snackbar("Required", "Please enter your nickname");
         return;
@@ -54,6 +60,10 @@ class RoomController extends GetxController {
 
   void joinRoom(String roomId) async {
     try {
+      if (userId.isEmpty) {
+        Get.snackbar("Auth Error", "Please enable internet and restart the app.");
+        return;
+      }
        if (nameController.text.isEmpty) {
         Get.snackbar("Required", "Please enter your nickname");
         return;
@@ -197,22 +207,11 @@ class RoomController extends GetxController {
   void startRematch() {
     if (room.value == null) return;
     
-    String currentP1 = room.value!.player1Id;
-    String currentP2 = room.value!.player2Id;
-    String currentP1Name = room.value!.player1Name;
-    String currentP2Name = room.value!.player2Name;
-    int currentP1Score = room.value!.player1Score;
-    int currentP2Score = room.value!.player2Score;
-
     Map<String, dynamic> data = {
       'board': List.filled(9, ''),
-      'player1Id': currentP2, 
-      'player2Id': currentP1,
-      'player1Name': currentP2Name,
-      'player2Name': currentP1Name,
-      'player1Score': currentP2Score, 
-      'player2Score': currentP1Score,
-      'turn': currentP2, 
+      // Keep player1/player2 (and thus X/O color & icon) stable.
+      // Only swap who makes the first move.
+      'turn': room.value!.player2Id,
       'winner': '',
       'isGameActive': true,
       'winningLine': [],

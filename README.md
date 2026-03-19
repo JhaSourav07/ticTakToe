@@ -98,23 +98,117 @@ Click Create Database.
 
 Choose a location (e.g., nam5 (us-central)).
 
-### Important: Choose Start in Test Mode.
+### Important: Enable Anonymous Auth + Secure Firestore Rules
+The default “Test mode” rules (`allow read, write: if true`) are only for local testing. For any production usage, you must enable Firebase Authentication (Anonymous Auth is fine) and replace your Firestore rules.
 
-Note: This allows anyone to read/write for 30 days. For production, you will need to set up Authentication and stricter rules.
+Step 4 (recommended): Enable Authentication
+Firebase Console -> Authentication -> Sign-in method:
+* Enable `Anonymous`.
 
-Step 5: Verify Security Rules
-Go to the Rules tab in Firestore and ensure it looks like this for development:
+Step 5: Set Firestore Security Rules
+Firebase Console -> Firestore Database -> Rules, replace the rules content with:
 
-```bash
-JavaScript
+```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+    match /rooms/{roomId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function myUid() {
+        return request.auth.uid;
+      }
+
+      function isPlayer() {
+        return resource.data.player1Id == myUid() || resource.data.player2Id == myUid();
+      }
+
+      // Read: authenticated users can read their own room, or any room that still has an open slot.
+      // Full rooms stay private.
+      allow read: if isSignedIn() && (
+        isPlayer() ||
+        resource.data.player1Id == '' ||
+        resource.data.player2Id == ''
+      );
+
+      // Create: the creator becomes player1.
+      allow create: if isSignedIn() &&
+        request.resource.data.player1Id == myUid() &&
+        request.resource.data.player2Id == '' &&
+        request.resource.data.turn == myUid() &&
+        request.resource.data.board.size() == 9;
+
+      allow update: if isSignedIn() && (
+        // Join empty player1 slot
+        (
+          request.writeFields().hasOnly(['player1Id', 'player1Name']) &&
+          resource.data.player1Id == '' &&
+          request.resource.data.player1Id == myUid()
+        ) ||
+
+        // Join empty player2 slot
+        (
+          request.writeFields().hasOnly(['player2Id', 'player2Name']) &&
+          resource.data.player2Id == '' &&
+          request.resource.data.player2Id == myUid()
+        ) ||
+
+        // Reconnect: idempotent update of your own slot
+        (
+          request.writeFields().hasOnly(['player1Id']) &&
+          resource.data.player1Id == myUid() &&
+          request.resource.data.player1Id == myUid()
+        ) ||
+        (
+          request.writeFields().hasOnly(['player2Id']) &&
+          resource.data.player2Id == myUid() &&
+          request.resource.data.player2Id == myUid()
+        ) ||
+
+        // Leave: clear your own slot
+        (
+          request.writeFields().hasOnly(['player1Id']) &&
+          resource.data.player1Id == myUid() &&
+          request.resource.data.player1Id == ''
+        ) ||
+        (
+          request.writeFields().hasOnly(['player2Id']) &&
+          resource.data.player2Id == myUid() &&
+          request.resource.data.player2Id == ''
+        ) ||
+
+        // Move: only the user whose turn it is can update (board + next turn)
+        (
+          request.writeFields().hasOnly(['board', 'turn']) &&
+          resource.data.turn == myUid() &&
+          (resource.data.player1Id == myUid() ? resource.data.player2Id : resource.data.player1Id) != '' &&
+          request.resource.data.turn == (
+            resource.data.player1Id == myUid()
+              ? resource.data.player2Id
+              : resource.data.player1Id
+          )
+        ) ||
+
+        // Winner / game state updates
+        (
+          request.writeFields().hasOnly(['winner', 'isGameActive', 'player1Score', 'player2Score', 'winningLine']) &&
+          isPlayer()
+        ) ||
+
+        // Rematch reset (no identity changes, just board/turn/state)
+        (
+          request.writeFields().hasOnly(['board', 'turn', 'winner', 'isGameActive', 'winningLine']) &&
+          isPlayer() &&
+          request.resource.data.player1Id == resource.data.player1Id &&
+          request.resource.data.player2Id == resource.data.player2Id
+        )
+      );
     }
   }
 }
+```
 
 ### Running the App
 Once Firebase is configured, you can run the app on your emulator or physical device.
